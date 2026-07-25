@@ -1,230 +1,134 @@
 ﻿using System;
+using System.Collections.Generic;
 
-namespace KMeans3D
+namespace ThreeDImensionArray
 {
-    public class KMeans
+    public class KMeansFromMedium
     {
-        public double[][] data;      // source points
-        public int k;                // number of clusters
-        public int N;                // number of points
-        public int dim;              // dimension (will be 3)
-        public int trials;           // how many times to restart
-        public int maxIter;          // max iterations per run
-        public Random rnd;
-        public int[] clustering;     // cluster id of each point
-        public double[][] means;     // the centroids we return
-
-        public KMeans(double[][] data, int k)
+        // Squared Euclidean distance
+        private static double SquaredDistance(double[] a, double[] b)
         {
-            this.data = data;
-            this.k = k;
-            this.N = data.Length;
-            this.dim = data[0].Length;          // should be 3
-            this.trials = Math.Max(10, N);      // sensible default
-            this.maxIter = N * 2;
-            Initialize(0);
-        }
-
-        // Random-partition initialization (exactly as in the article)
-        public void Initialize(int seed)
-        {
-            rnd = new Random(seed);
-            clustering = new int[N];
-            means = new double[k][];
-            for (int i = 0; i < k; ++i)
-                means[i] = new double[dim];
-
-            int[] indices = new int[N];
-            for (int i = 0; i < N; ++i) indices[i] = i;
-            Shuffle(indices);
-
-            // first k points get unique cluster IDs
-            for (int i = 0; i < k; ++i)
-                clustering[indices[i]] = i;
-
-            // remaining points get random cluster IDs
-            for (int i = k; i < N; ++i)
-                clustering[indices[i]] = rnd.Next(0, k);
-
-            UpdateMeans();
-        }
-
-        private void Shuffle(int[] indices)
-        {
-            for (int i = 0; i < indices.Length; ++i)
+            double sum = 0;
+            for (int i = 0; i < a.Length; i++)
             {
-                int r = rnd.Next(i, indices.Length);
-                int tmp = indices[i];
-                indices[i] = indices[r];
-                indices[r] = tmp;
-            }
-        }
-
-        private static double SumSquared(double[] a, double[] b)
-        {
-            double sum = 0.0;
-            for (int i = 0; i < a.Length; ++i)
-            {
-                double d = a[i] - b[i];
-                sum += d * d;
+                double diff = a[i] - b[i];
+                sum += diff * diff;
             }
             return sum;
         }
 
-        private static int ArgMin(double[] v)
+        // Select k random points as initial centroids
+        private static List<double[]> GetRandomCentroids(List<double[]> dataset, int k, Random rnd)
         {
-            int minIdx = 0;
-            double minVal = v[0];
-            for (int i = 1; i < v.Length; ++i)
+            var centroids = new List<double[]>();
+            var used = new HashSet<int>();
+
+            while (centroids.Count < k)
             {
-                if (v[i] < minVal)
+                int index = rnd.Next(dataset.Count);
+                if (!used.Contains(index))
                 {
-                    minVal = v[i];
-                    minIdx = i;
+                    used.Add(index);
+                    centroids.Add((double[])dataset[index].Clone());
                 }
             }
-            return minIdx;
-        }
-
-        private static bool AreEqual(int[] a, int[] b)
-        {
-            for (int i = 0; i < a.Length; ++i)
-                if (a[i] != b[i]) return false;
-            return true;
-        }
-
-        private static int[] Copy(int[] src)
-        {
-            int[] dst = new int[src.Length];
-            Array.Copy(src, dst, src.Length);
-            return dst;
-        }
-
-        // Recompute centroids from current clustering
-        public bool UpdateMeans()
-        {
-            int[] counts = new int[k];
-            for (int i = 0; i < N; ++i)
-                counts[clustering[i]]++;
-
-            for (int c = 0; c < k; ++c)
-                if (counts[c] == 0) return false;   // empty cluster
-
-            // reset
-            for (int c = 0; c < k; ++c)
-            {
-                counts[c] = 0;
-                for (int j = 0; j < dim; ++j) means[c][j] = 0.0;
-            }
-
-            for (int i = 0; i < N; ++i)
-            {
-                int c = clustering[i];
-                counts[c]++;
-                for (int j = 0; j < dim; ++j)
-                    means[c][j] += data[i][j];
-            }
-
-            for (int c = 0; c < k; ++c)
-                for (int j = 0; j < dim; ++j)
-                    means[c][j] /= counts[c];
-
-            return true;
+            return centroids;
         }
 
         // Assign every point to the nearest centroid
-        public bool UpdateClustering()
+        private static List<List<double[]>> AssignPoints(List<double[]> dataset, List<double[]> centroids)
         {
-            int[] newClustering = new int[N];
-            double[] distances = new double[k];
+            var clusters = new List<List<double[]>>();
+            for (int i = 0; i < centroids.Count; i++)
+                clusters.Add(new List<double[]>());
 
-            for (int i = 0; i < N; ++i)
+            foreach (var point in dataset)
             {
-                for (int c = 0; c < k; ++c)
-                    distances[c] = SumSquared(data[i], means[c]);
+                int closest = 0;
+                double minDist = SquaredDistance(point, centroids[0]);
 
-                newClustering[i] = ArgMin(distances);
-            }
-
-            if (AreEqual(clustering, newClustering))
-                return false;   // no change → converged
-
-            // check for empty clusters
-            int[] counts = new int[k];
-            for (int i = 0; i < N; ++i)
-                counts[newClustering[i]]++;
-
-            for (int c = 0; c < k; ++c)
-                if (counts[c] == 0) return false;
-
-            // accept the new assignment
-            for (int i = 0; i < N; ++i)
-                clustering[i] = newClustering[i];
-
-            return true;
-        }
-
-        // One full run of Lloyd’s algorithm
-        public int[] ClusterOnce()
-        {
-            int iter = 0;
-            while (iter < maxIter)
-            {
-                if (!UpdateClustering()) break;
-                if (!UpdateMeans()) break;
-                iter++;
-            }
-            return clustering;
-        }
-
-        public double WCSS()
-        {
-            double sum = 0.0;
-            for (int i = 0; i < N; ++i)
-                sum += SumSquared(data[i], means[clustering[i]]);
-            return sum;
-        }
-
-        // Run many trials and keep the best result (lowest WCSS)
-        public double[][] Cluster()
-        {
-            double bestWCSS = WCSS();
-            int[] bestClustering = Copy(clustering);
-            double[][] bestMeans = new double[k][];
-            for (int c = 0; c < k; ++c)
-                bestMeans[c] = (double[])means[c].Clone();
-
-            for (int t = 1; t < trials; ++t)
-            {
-                Initialize(t);               // new random start
-                ClusterOnce();
-                double wcss = WCSS();
-
-                if (wcss < bestWCSS)
+                for (int i = 1; i < centroids.Count; i++)
                 {
-                    bestWCSS = wcss;
-                    bestClustering = Copy(clustering);
-                    for (int c = 0; c < k; ++c)
-                        bestMeans[c] = (double[])means[c].Clone();
+                    double dist = SquaredDistance(point, centroids[i]);
+                    if (dist < minDist)
+                    {
+                        minDist = dist;
+                        closest = i;
+                    }
                 }
+                clusters[closest].Add(point);
+            }
+            return clusters;
+        }
+
+        // Recalculate centroids
+        private static List<double[]> CalculateNewCentroids(List<List<double[]>> clusters, int dimensions)
+        {
+            var newCentroids = new List<double[]>();
+
+            foreach (var cluster in clusters)
+            {
+                if (cluster.Count == 0)
+                {
+                    newCentroids.Add(new double[dimensions]);
+                    continue;
+                }
+
+                var mean = new double[dimensions];
+                foreach (var point in cluster)
+                {
+                    for (int d = 0; d < dimensions; d++)
+                        mean[d] += point[d];
+                }
+
+                for (int d = 0; d < dimensions; d++)
+                    mean[d] /= cluster.Count;
+
+                newCentroids.Add(mean);
+            }
+            return newCentroids;
+        }
+
+        // Main K-Means function
+        public static (List<double[]> centroids, List<List<double[]>> clusters)
+            KMeans(List<double[]> dataset, int k, int maxIterations = 100)
+        {
+            if (dataset == null || dataset.Count == 0)
+                throw new ArgumentException("Dataset is empty");
+
+            int dimensions = dataset[0].Length;
+            var rnd = new Random();
+
+            var centroids = GetRandomCentroids(dataset, k, rnd);
+            List<List<double[]>> clusters = new List<List<double[]>>();   // ← fixed nullability
+
+            for (int iter = 0; iter < maxIterations; iter++)
+            {
+                clusters = AssignPoints(dataset, centroids);
+                var newCentroids = CalculateNewCentroids(clusters, dimensions);
+
+                bool converged = true;
+                for (int i = 0; i < k; i++)
+                {
+                    if (SquaredDistance(centroids[i], newCentroids[i]) > 1e-9)
+                    {
+                        converged = false;
+                        break;
+                    }
+                }
+
+                centroids = newCentroids;
+                if (converged) break;
             }
 
-            // restore best result
-            clustering = bestClustering;
-            means = bestMeans;
-            return means;                   // ← the required output
+            return (centroids, clusters);
         }
     }
-
-    // -------------------------------------------------------
-    // Example usage for 3-D points
-    // -------------------------------------------------------
     class Program
     {
-        static void Main()
+        static void Main(string[] args)
         {
-            // Example 3-D points
-            double[][] points = new double[][]
+            var points = new List<double[]>
             {
                 new double[] { 0.1, 0.2, 0.0 },
                 new double[] { 0.0, 0.1, 0.1 },
@@ -237,20 +141,19 @@ namespace KMeans3D
                 new double[] {10.0, 0.0,10.0 }
             };
 
-            Console.WriteLine("Running k-means for 3-D points (k = 3)...\n");
+            Console.WriteLine("K-Means\n");
 
-            KMeans km = new KMeans(points, k: 3);
-            double[][] centroids = km.Cluster();   // returns the centroids
+            var (centroids, clusters) = KMeansFromMedium.KMeans(points, k: 3);
 
-            Console.WriteLine("Final cluster centroids:");
-            for (int i = 0; i < centroids.Length; ++i)
+            Console.WriteLine("Final Centroids:");
+            for (int i = 0; i < centroids.Count; i++)
             {
-                Console.WriteLine($"  Cluster {i}: " +
-                    $"({centroids[i][0]:F3}, {centroids[i][1]:F3}, {centroids[i][2]:F3})");
+                var c = centroids[i];
+                Console.WriteLine($"  Cluster {i}: ({c[0]:F3}, {c[1]:F3}, {c[2]:F3})");
             }
 
             Console.WriteLine("\nDone.");
-            Console.ReadLine();
+            Console.ReadKey();
         }
     }
 }
