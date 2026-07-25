@@ -80,5 +80,4 @@ textfunction KMeans3D(points, k, maxIterations):
 2. Replace the content of `Program.cs` with the provided code.
 3. Press **F5** to run.
 
-3\. Press **F5** to run.
 
