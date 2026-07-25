@@ -1,158 +1,128 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel.Design;
+using System.Linq;
 
-namespace ThreeDImensionArray
+public static class KMeans3D
 {
-    public class KMeansFromMedium
+    public static double[][] Cluster(double[][] points, int k, int maxIterations = 100, int? seed = null)
     {
-        // Squared Euclidean distance
-        private static double SquaredDistance(double[] a, double[] b)
+        if (points == null || points.Length == 0)
+            throw new ArgumentException("Points array is empty");
+        if (k <= 0 || k > points.Length)
+            throw new ArgumentException("Invalid k");
+
+        int n = points.Length;
+        var rnd = seed.HasValue ? new Random(seed.Value) : new Random();
+
+        // 1. Initializing centroids by randomly selecting k distinct points
+        var centroids = new double[k][];
+        var used = new bool[n];
+        for (int i = 0; i < k; i++)
         {
-            double sum = 0;
-            for (int i = 0; i < a.Length; i++)
-            {
-                double diff = a[i] - b[i];
-                sum += diff * diff;
-            }
-            return sum;
+            int idx;
+            do { idx = rnd.Next(n); } while (used[idx]);
+            used[idx] = true;
+            centroids[i] = (double[])points[idx].Clone();
         }
 
-        // Select k random points as initial centroids
-        private static List<double[]> GetRandomCentroids(List<double[]> dataset, int k, Random rnd)
+        var assignments = new int[n];
+
+        for (int iter = 0; iter < maxIterations; iter++)
         {
-            var centroids = new List<double[]>();
-            var used = new HashSet<int>();
-
-            while (centroids.Count < k)
+            // 2. Assiging Clusters Coordinates
+            bool changed = false;
+            for (int i = 0; i < n; i++)
             {
-                int index = rnd.Next(dataset.Count);
-                if (!used.Contains(index))
+                int best = 0;
+                double bestDist = DistanceSquared(points[i], centroids[0]);
+                for (int c = 1; c < k; c++)
                 {
-                    used.Add(index);
-                    centroids.Add((double[])dataset[index].Clone());
-                }
-            }
-            return centroids;
-        }
-
-        // Assign every point to the nearest centroid
-        private static List<List<double[]>> AssignPoints(List<double[]> dataset, List<double[]> centroids)
-        {
-            var clusters = new List<List<double[]>>();
-            for (int i = 0; i < centroids.Count; i++)
-                clusters.Add(new List<double[]>());
-
-            foreach (var point in dataset)
-            {
-                int closest = 0;
-                double minDist = SquaredDistance(point, centroids[0]);
-
-                for (int i = 1; i < centroids.Count; i++)
-                {
-                    double dist = SquaredDistance(point, centroids[i]);
-                    if (dist < minDist)
+                    double d = DistanceSquared(points[i], centroids[c]);
+                    if (d < bestDist)
                     {
-                        minDist = dist;
-                        closest = i;
+                        bestDist = d;
+                        best = c;
                     }
                 }
-                clusters[closest].Add(point);
+                if (assignments[i] != best)
+                {
+                    assignments[i] = best;
+                    changed = true;
+                }
             }
-            return clusters;
-        }
 
-        // Recalculate centroids
-        private static List<double[]> CalculateNewCentroids(List<List<double[]>> clusters, int dimensions)
-        {
-            var newCentroids = new List<double[]>();
+            if (!changed) break; // converged
 
-            foreach (var cluster in clusters)
+            // 3. Updating centroids with mean of assigned points
+            var sums = new double[k][];
+            var counts = new int[k];
+            for (int c = 0; c < k; c++)
+                sums[c] = new double[3];
+
+            for (int i = 0; i < n; i++)
             {
-                if (cluster.Count == 0)
-                {
-                    newCentroids.Add(new double[dimensions]);
-                    continue;
-                }
-
-                var mean = new double[dimensions];
-                foreach (var point in cluster)
-                {
-                    for (int d = 0; d < dimensions; d++)
-                        mean[d] += point[d];
-                }
-
-                for (int d = 0; d < dimensions; d++)
-                    mean[d] /= cluster.Count;
-
-                newCentroids.Add(mean);
+                int c = assignments[i];
+                sums[c][0] += points[i][0];
+                sums[c][1] += points[i][1];
+                sums[c][2] += points[i][2];
+                counts[c]++;
             }
-            return newCentroids;
-        }
 
-        // Main K-Means function
-        public static (List<double[]> centroids, List<List<double[]>> clusters)
-            KMeans(List<double[]> dataset, int k, int maxIterations = 100)
-        {
-            if (dataset == null || dataset.Count == 0)
-                throw new ArgumentException("Dataset is empty");
-
-            int dimensions = dataset[0].Length;
-            var rnd = new Random();
-
-            var centroids = GetRandomCentroids(dataset, k, rnd);
-            List<List<double[]>> clusters = new List<List<double[]>>();   // ← fixed nullability
-
-            for (int iter = 0; iter < maxIterations; iter++)
+            for (int c = 0; c < k; c++)
             {
-                clusters = AssignPoints(dataset, centroids);
-                var newCentroids = CalculateNewCentroids(clusters, dimensions);
-
-                bool converged = true;
-                for (int i = 0; i < k; i++)
+                if (counts[c] > 0)
                 {
-                    if (SquaredDistance(centroids[i], newCentroids[i]) > 1e-9)
-                    {
-                        converged = false;
-                        break;
-                    }
+                    centroids[c][0] = sums[c][0] / counts[c];
+                    centroids[c][1] = sums[c][1] / counts[c];
+                    centroids[c][2] = sums[c][2] / counts[c];
                 }
-
-                centroids = newCentroids;
-                if (converged) break;
+                else { }
             }
-
-            return (centroids, clusters);
         }
+
+        return centroids;
     }
+
+    private static double DistanceSquared(double[] a, double[] b)
+    {
+        double dx = a[0] - b[0];
+        double dy = a[1] - b[1];
+        double dz = a[2] - b[2];
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
-            var points = new List<double[]>
+            // Hardcoded 3D points for clustering for Easy Demonstration instead of user input
+            double[][] points = new double[][]
             {
-                new double[] { 0.1, 0.2, 0.0 },
-                new double[] { 0.0, 0.1, 0.1 },
-                new double[] {-0.1, 0.0, 0.0 },
-                new double[] { 5.1, 4.9, 5.0 },
-                new double[] { 4.8, 5.2, 5.1 },
-                new double[] { 5.0, 5.0, 4.9 },
-                new double[] { 9.9, 0.1,10.1 },
-                new double[] {10.1,-0.1, 9.9 },
-                new double[] {10.0, 0.0,10.0 }
+                new double[] { 0.1,  0.2,  0.0 },
+                new double[] { 0.0,  0.1,  0.1 },
+                new double[] {-0.1,  0.0,  0.0 },
+                new double[] { 5.1,  4.9,  5.0 },
+                new double[] { 4.8,  5.2,  5.1 },
+                new double[] { 5.0,  5.0,  4.9 },
+                new double[] { 9.9,  0.1, 10.1 },
+                new double[] {10.1, -0.1,  9.9 },
+                new double[] {10.0,  0.0, 10.0 }
             };
 
-            Console.WriteLine("K-Means\n");
+            Console.WriteLine("K-Means Clustering for 3D Points\n");
 
-            var (centroids, clusters) = KMeansFromMedium.KMeans(points, k: 3);
+            // Create and run
+            double[][] centroids = KMeans3D.Cluster(points, k: 3, maxIterations: 50, seed: 42);
 
-            Console.WriteLine("Final Centroids:");
-            for (int i = 0; i < centroids.Count; i++)
+            // Display result
+            Console.WriteLine("Final cluster centroids (coordinates):");
+            for (int i = 0; i < centroids.Length; i++)
             {
-                var c = centroids[i];
-                Console.WriteLine($"  Cluster {i}: ({c[0]:F3}, {c[1]:F3}, {c[2]:F3})");
+                Console.WriteLine($"  Cluster {i}: " +
+                    $"({centroids[i][0]:F4}, {centroids[i][1]:F4}, {centroids[i][2]:F4})");
             }
 
-            Console.WriteLine("\nDone.");
+            Console.WriteLine("\nProgeam Completed.");
             Console.ReadKey();
         }
     }

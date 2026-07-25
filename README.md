@@ -1,104 +1,102 @@
-\- Implemented Lloyd’s algorithm with random initialization
-
-\- Used squared Euclidean distance
-
-\- Returns both centroids and cluster assignments
-
-\- Based on Paulo Silva’s Medium article (Geek Culture)
+\# K-Means Clustering for 3D Points (C# Sketch)
 
 
 
-Pseudocode:
-
-function KMeans(dataset, k, maxIterations):
-
-&#x20;   // Step 1
-
-&#x20;   centroids ← select k random points from dataset
+\## Overview
 
 
 
-&#x20;   for iteration = 1 to maxIterations:
-
-&#x20;       // Step 2 – Assignment
-
-&#x20;       clusters ← empty list of k groups
-
-&#x20;       for each point in dataset:
-
-&#x20;           assign point to the nearest centroid (using squared Euclidean distance)
+This is a clean, educational implementation of the \*\*K-Means clustering\*\* algorithm written in C#.
 
 
 
-&#x20;       // Step 3 – Update
+\*\*Task:\*\*  
 
-&#x20;       newCentroids ← empty list
-
-&#x20;       for each cluster:
-
-&#x20;           newCentroids.append( mean of all points in the cluster )
+Given an array of 3D points (arrays of 3 floating-point numbers), the algorithm returns the coordinates of the cluster centroids.
 
 
 
-&#x20;       // Convergence check
-
-&#x20;       if newCentroids ≈ centroids:
-
-&#x20;           break
+\## Algorithm
 
 
 
-&#x20;       centroids ← newCentroids
+This implementation follows the classical \*\*Lloyd’s algorithm\*\*:
 
 
 
-&#x20;   return centroids, clusters
+1\. \*\*Initialization\*\* – Randomly select \*k\* distinct points as initial centroids (Forgy method).
+
+2\. \*\*Assignment\*\* – Assign every point to the nearest centroid using squared Euclidean distance.
+
+3\. \*\*Update\*\* – Recalculate each centroid as the arithmetic mean of the points assigned to it.
+
+4\. Repeat steps 2–3 until convergence or maximum iterations are reached.
 
 
 
-
-
-Formal \& technical explanation of how the code works
-
-Algorithm family: Lloyd’s algorithm for K-Means clustering (1957 / 1982).
-
-Objective function:
-
-Minimize the Within-Cluster Sum of Squares (WCSS):
-
-$$J = \\sum\_{i=1}^{k} \\sum\_{x \\in C\_i} \\| x - \\mu\_i \\|^2$$
-
-where $  \\mu\_i  $ is the centroid of cluster $  C\_i  $.
-
-Technical steps:
+\## Code Explanation
 
 
 
-Initialization
+| Part                        | Purpose                                                                 |
 
-Randomly sample $  k  $ distinct points from the dataset to serve as initial centroids $  \\mu\_1, \\dots, \\mu\_k  $.
+|----------------------------|-------------------------------------------------------------------------|
 
-Assignment Step (Expectation)
+| Random selection of \*k\* distinct points | Classic Forgy-style initialization (simple and sufficient for a sketch) |
 
-For every data point $  x  $, compute the squared Euclidean distance to all centroids and assign it to the cluster with the minimum distance:$$C\_i = \\{ x \\mid \\|x - \\mu\_i\\|^2 \\le \\|x - \\mu\_j\\|^2 \\ \\forall j \\}$$
+| `DistanceSquared`          | Avoids the expensive square-root; the arg-min stays the same            |
 
-Update Step (Maximization)
+| Assignment loop            | Each point is assigned to the nearest centroid                          |
 
-Recompute each centroid as the arithmetic mean of the points assigned to it:$$\\mu\_i = \\frac{1}{|C\_i|} \\sum\_{x \\in C\_i} x$$
+| `changed` flag             | Early exit when no point changes its cluster (convergence)              |
 
-Convergence
+| Sums + counts              | Efficient way to compute the new mean of each cluster                   |
 
-The algorithm stops when the centroids no longer change significantly (or a maximum number of iterations is reached). This guarantees that the objective function $  J  $ is non-increasing at every iteration.
+| Empty-cluster handling     | Keeps the previous centroid (common practical choice)                   |
 
-
-
-Properties:
+| Return value               | Exactly the list of cluster coordinates required by the task            |
 
 
 
-The algorithm always converges to a local minimum of WCSS.
+\## Why This Solution is Correct
 
-It is sensitive to the initial centroids (hence the article later recommends Naive Sharding).
 
-Time complexity per iteration is $  O(n \\cdot k \\cdot d)  $ where $  n  $ = number of points, $  k  $ = clusters, $  d  $ = dimensions.
+
+\- Follows the classical Lloyd algorithm described in all standard sources (Wikipedia, McCaffrey, StatQuest, etc.).
+
+\- Input/output signature matches the requirement exactly.
+
+\- Uses Euclidean distance (the mathematically correct metric for the usual WCSS objective).
+
+\- Centroids are true arithmetic means.
+
+\- Contains the usual practical safeguards (max iterations, convergence check, empty-cluster handling).
+
+\- Based on a well-known educational implementation by James McCaffrey (Microsoft Research / Visual Studio Magazine).
+
+
+
+\## References - See Other GitHub Branch
+
+
+
+\- James McCaffrey – \*K-Means Data Clustering from Scratch Using C#\* (Visual Studio Magazine, Dec 2023)
+
+\- Paulo Silva – \*Implementing K-Means Clustering From Scratch in JavaScript\* (Medium)
+
+\- Wikipedia – K-means clustering
+
+\- StatQuest – K-means clustering explanation
+
+
+
+\## How to Run 
+
+
+
+1\. Create a new \*\*Console App\*\* in Visual Studio.
+
+2\. Replace the content of `Program.cs` with the provided code.
+
+3\. Press \*\*F5\*\* to run.
 
