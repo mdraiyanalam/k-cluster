@@ -1,13 +1,14 @@
-**K-Means Clustering for 3D Points using C# Sketch**
+# K-Means Clustering for 3D Points using C# Sketch
 
-**Overview**
-This is a clean, educational implementation of the \*\*K-Means clustering\*\* algorithm written in C#.
+## Overview
+This is a clean, educational implementation of the **K-Means clustering** algorithm written in C#.
 
-**Task:**  
+## Task
 Given an array of 3D points (arrays of 3 floating-point numbers), the algorithm returns the coordinates of the cluster centroids.
 
-**Algorithm**
+## Algorithm
 This implementation follows the classical **Lloyd’s algorithm**:
+
 - **Initialization** – Randomly select *k* distinct points as initial centroids (Forgy method).
 - **Assignment** – Assign every point to the nearest centroid using squared Euclidean distance.
 - **Update** – Recalculate each centroid as the arithmetic mean of the points assigned to it.
@@ -46,74 +47,38 @@ textfunction KMeans3D(points, k, maxIterations):
 
     return centroids   // The final cluster coordinates
 
-Explanation of the Pseudocode
+## Explanation of the Pseudocode
 
+| Part of Pseudocode                          | What it does                                                              | Why it is important                                      |
+|--------------------------------------------|---------------------------------------------------------------------------|----------------------------------------------------------|
+| `centroids ← select k distinct random points` | Chooses *k* different points randomly as starting centers (Forgy initialization) | Gives the algorithm a starting point                     |
+| `bestCluster ← the centroid closest to p`  | Finds the nearest centroid using Squared Euclidean distance               | Assigns each point to the most similar cluster           |
+| `changed ← true`                           | Marks that at least one point moved to a different cluster                | Used to detect convergence                               |
+| `if changed = false then break`            | Stops the algorithm early when no points changed clusters                 | Prevents unnecessary iterations (convergence check)      |
+| `centroids[c] ← mean of all points...`     | Recalculates the center of each cluster as the average of its points      | Moves the centroids to better positions                  |
+| `else (empty cluster)`                     | Leaves the old centroid unchanged if a cluster has no points              | Simple and stable way to handle empty clusters           |
+| `return centroids`                         | Returns the final positions of the cluster centers                        | This is exactly what the Itransition task requires       |
 
+## In This Solution
+- Follows the classical Lloyd algorithm described in all standard sources (Wikipedia, McCaffrey, StatQuest, etc.).
+- Input/output signature matches the requirement exactly.
+- Uses Euclidean distance (the mathematically correct metric for the usual WCSS objective).
+- Centroids are true arithmetic means.
+- Contains the usual practical safeguards (max iterations, convergence check, empty-cluster handling).
+- Based on a well-known educational implementation by James McCaffrey (Microsoft Research / Visual Studio Magazine).
 
+## References
 
+- James McCaffrey – **K-Means Data Clustering from Scratch Using C#** (Visual Studio Magazine, Dec 2023)
+- Paulo Silva – **Implementing K-Means Clustering From Scratch in JavaScript** (Medium)
+- Wikipedia – K-means clustering
+- StatQuest – K-means clustering explanation
 
+## How to Run
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Part of PseudocodeWhat it doesWhy it is importantcentroids ← select k distinct random pointsChooses k different points randomly as starting centers (Forgy initialization)Gives the algorithm a starting pointbestCluster ← the centroid closest to pFinds the nearest centroid using Squared Euclidean distanceAssigns each point to the most similar clusterchanged ← trueMarks that at least one point moved to a different clusterUsed to detect convergenceif changed = false then breakStops the algorithm early when no points changed clustersPrevents unnecessary iterations (convergence check)centroids[c] ← mean of all points...Recalculates the center of each cluster as the average of its pointsMoves the centroids to better positionselse (empty cluster)Leaves the old centroid unchanged if a cluster has no pointsSimple and stable way to handle empty clustersreturn centroidsReturns the final positions of the cluster centersThis is exactly what the Itransition task requires
-**In This Solution**
-\- Follows the classical Lloyd algorithm described in all standard sources (Wikipedia, McCaffrey, StatQuest, etc.).
-\- Input/output signature matches the requirement exactly.
-\- Uses Euclidean distance (the mathematically correct metric for the usual WCSS objective).
-\- Centroids are true arithmetic means.
-\- Contains the usual practical safeguards (max iterations, convergence check, empty-cluster handling).
-\- Based on a well-known educational implementation by James McCaffrey (Microsoft Research / Visual Studio Magazine).
-
-**References** - See Other GitHub Branch
-\- James McCaffrey – **K-Means Data Clustering from Scratch Using C#** (Visual Studio Magazine, Dec 2023)
-
-\- Paulo Silva – **Implementing K-Means Clustering From Scratch in JavaScript** (Medium)
-
-\- Wikipedia – K-means clustering
-
-\- StatQuest – K-means clustering explanation
-
-**How to Run**
-1\. Create a new **Console App** in Visual Studio.
-
-2\. Replace the content of **Program.cs** with the provided code.
+1. Create a new **Console App** in Visual Studio.
+2. Replace the content of `Program.cs` with the provided code.
+3. Press **F5** to run.
 
 3\. Press **F5** to run.
 
